@@ -9,6 +9,13 @@ npm test        # vitest
 npm run build
 ```
 
+## Deploy
+
+Live: https://quasy.vercel.app. Vercel is connected to this GitHub repo: every `git push` to `master`
+publishes the site automatically (other branches get preview URLs). Manual fallback: `npx vercel deploy --prod`.
+
+## Local phone testing
+
 Phone testing: phone and PC on the same network, open the `Network` URL Vite prints, always with `https://`. HTTPS is required for camera access.
 
 iPhone: Safari denies the camera on a "Not secure" page, so trust the dev CA once.
