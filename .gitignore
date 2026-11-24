@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 # mkcert root CA, machine-specific: served only so a phone can trust the dev server
 public/dev-ca.crt
+
+.vercel
