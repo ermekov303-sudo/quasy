@@ -1,0 +1,4 @@
+node_modules
+dist
+# local mkcert root CA (contains this PC's name); only for LAN phone testing
+public/dev-ca.crt
