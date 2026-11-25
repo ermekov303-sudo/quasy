@@ -33,7 +33,7 @@ describe('filterTricks', () => {
   it('returns everything with no filters', () => expect(filterTricks(TRICKS, all)).toHaveLength(25))
   it('searches names case-insensitively', () =>
     expect(filterTricks(TRICKS, { ...all, query: '  UNDER ' }).map((t) => t.id)).toEqual([
-      'double-under', 'consecutive-double-unders', 'triple-under', 'double-under-cross', 'quadruple-under',
+      'double-under', 'backwards-double-under', 'triple-under', 'double-under-cross', 'quadruple-under',
     ]))
   it('combines category and level', () => {
     expect(filterTricks(TRICKS, { ...all, category: 'power' })).toHaveLength(5)

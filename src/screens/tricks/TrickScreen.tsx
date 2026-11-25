@@ -10,10 +10,34 @@ import { Page } from '../../ui/Page'
 import { ScreenHeader } from '../../ui/ScreenHeader'
 import { DifficultyBadge, SafetyNote, StatusPicker, TrickCard } from './parts'
 
-/** Real tutorial when `videoUrl` is set; otherwise an honest placeholder of the same size. */
+/** Demo clip with its credit when the trick has one; otherwise an honest placeholder of the same size. */
 function TutorialVideo({ trick }: { trick: Trick }) {
-  if (trick.videoUrl)
-    return <video src={trick.videoUrl} controls playsInline preload="metadata" className="aspect-video w-full rounded-[var(--radius-card)] bg-surface" />
+  const v = trick.video
+  if (v)
+    return (
+      <figure>
+        <video
+          src={v.src}
+          poster={v.poster}
+          aria-label={`${trick.name} demo video`}
+          controls
+          muted
+          loop
+          autoPlay
+          playsInline
+          className="aspect-video w-full rounded-[var(--radius-card)] bg-surface object-contain"
+        />
+        <figcaption className="mt-2 text-xs text-muted">
+          Demo: <a href={v.credit.url} target="_blank" rel="noreferrer" className="text-accent-fg underline underline-offset-2">{v.credit.label}</a>
+          {v.credit.license && (
+            <>
+              ,{' '}
+              <a href={v.credit.license.url} target="_blank" rel="noreferrer" className="underline underline-offset-2">{v.credit.license.name}</a>
+            </>
+          )}
+        </figcaption>
+      </figure>
+    )
   return (
     <div className="grid aspect-video w-full place-items-center rounded-[var(--radius-card)] border border-dashed border-line bg-gradient-to-br from-accent-soft to-surface text-center">
       <div>

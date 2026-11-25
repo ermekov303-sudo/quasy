@@ -55,9 +55,11 @@ export function StatusPicker({ trick }: { trick: Trick }) {
   )
 }
 
-/** Small placeholder tile (no real preview media yet): category icon on a dark tile. */
-function Thumb({ category }: { category: CategoryId }) {
-  const Icon = CATEGORY_ICON[category]
+/** Video poster when the trick has a demo clip, otherwise a placeholder tile with the category icon. */
+function Thumb({ trick }: { trick: Trick }) {
+  const Icon = CATEGORY_ICON[trick.category]
+  if (trick.video?.poster)
+    return <img src={trick.video.poster} alt="" loading="lazy" className="size-14 shrink-0 rounded-xl bg-surface-2 object-cover" />
   return (
     <div aria-hidden className="grid size-14 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-accent-soft to-surface-2 text-accent-fg">
       <Icon size={24} />
@@ -73,7 +75,7 @@ export function TrickCard({ trick, showCategory = true }: { trick: Trick; showCa
   return (
     <li className="rounded-[var(--radius-card)] bg-surface">
       <Link to={`/tricks/t/${trick.id}`} className="flex gap-3 rounded-t-[var(--radius-card)] p-4 pb-2 transition-colors hover:bg-surface-2/50">
-        <Thumb category={trick.category} />
+        <Thumb trick={trick} />
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold">{trick.name}</h3>
           <div className="mt-1 flex flex-wrap items-center gap-2">
