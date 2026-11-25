@@ -1,6 +1,9 @@
 import { DrawingUtils, PoseLandmarker, type NormalizedLandmark } from '@mediapipe/tasks-vision'
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
 import { JumpDetector, type Activity, type DetectorEvent } from '../detection/jumpDetector'
+import type { WindowLabel } from '../recognition/classifier'
+import type { TrickEvent } from '../recognition/events'
+import { loadTrickTemplates, TrickRecognizer } from '../recognition/recognizer'
 import { createMediaPipePoseDetector, type PoseDetector } from './poseDetector'
 import { poseToSample, type PoseStatus } from './poseSignal'
 
@@ -13,9 +16,14 @@ export type TrackingSnapshot = {
   trips: number
   lost: number
   activity: Activity
+  trick: WindowLabel // recognizer's current window verdict
+  trickScore: number // rounded to 0.05 so the UI re-renders only on visible changes
 }
 
-const EMPTY: TrackingSnapshot = { pose: 'none', jumps: 0, streak: 0, trips: 0, lost: 0, activity: 'idle' }
+/** Read on the UI's own timer, never via state: pose loop speed and costs. */
+export type TrackingPerf = { fps: number; poseMs: number; trickMs: number }
+
+const EMPTY: TrackingSnapshot = { pose: 'none', jumps: 0, streak: 0, trips: 0, lost: 0, activity: 'idle', trick: 'idle', trickScore: 0 }
 const SIGNAL_WINDOW_MS = 4000
 
 type Opts = {
@@ -26,19 +34,22 @@ type Opts = {
   useMediaTime: boolean // video files: time = position in the clip, so counts don't depend on processing speed
   showOverlay: boolean
   onEvent?: (e: DetectorEvent) => void
+  onTrick?: (e: TrickEvent) => void
 }
 
-export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useMediaTime, showOverlay, onEvent }: Opts) {
+export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useMediaTime, showOverlay, onEvent, onTrick }: Opts) {
   const [model, setModel] = useState<ModelStatus>('loading')
   const [snap, setSnap] = useState<TrackingSnapshot>(EMPTY)
   const detectorRef = useRef<PoseDetector | null>(null)
   const jdRef = useRef(new JumpDetector())
+  const recRef = useRef(new TrickRecognizer())
+  const perfRef = useRef<TrackingPerf>({ fps: 0, poseMs: 0, trickMs: 0 })
   const countsRef = useRef({ ...EMPTY })
   const signalBuf = useRef<{ t: number; v: number | null }[]>([])
   const jumpTs = useRef<number[]>([])
-  const optsRef = useRef({ showOverlay, onEvent, useMediaTime })
+  const optsRef = useRef({ showOverlay, onEvent, onTrick, useMediaTime })
   useLayoutEffect(() => {
-    optsRef.current = { showOverlay, onEvent, useMediaTime }
+    optsRef.current = { showOverlay, onEvent, onTrick, useMediaTime }
   })
 
   const loadModel = useCallback(() => {
@@ -54,6 +65,7 @@ export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useM
 
   useEffect(() => {
     loadModel()
+    void loadTrickTemplates().then((t) => (recRef.current.templates = t)) // lazy, optional
     return () => {
       detectorRef.current?.close()
       detectorRef.current = null
@@ -62,6 +74,7 @@ export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useM
 
   const reset = useCallback(() => {
     jdRef.current.reset()
+    recRef.current.reset()
     countsRef.current = { ...EMPTY }
     signalBuf.current = []
     jumpTs.current = []
@@ -75,6 +88,7 @@ export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useM
     let handle = 0
     const overlayEl = overlayRef.current
     let lastMediaT = -1
+    let lastFrameAt = 0
     const hasRVFC = 'requestVideoFrameCallback' in video
     const schedule = () => {
       if (stopped) return
@@ -91,17 +105,29 @@ export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useM
       // camera stream, which froze tracking after the first frame. rVFC already fires once per new frame.
       if (fileMode) {
         if (media === lastMediaT) return schedule()
-        if (media < lastMediaT) jdRef.current.reset() // clip looped or seeked back
+        if (media < lastMediaT) {
+          jdRef.current.reset() // clip looped or seeked back
+          recRef.current.reset()
+        }
         lastMediaT = media
       }
       const t = fileMode ? media * 1000 : now
 
       let lm: ReturnType<PoseDetector['detect']>
+      const p0 = performance.now()
       try {
         lm = det.detect(video, now)
       } catch {
         return schedule() // one bad frame (e.g. GPU hiccup) must not kill the loop
       }
+      const perf = perfRef.current
+      perf.poseMs = perf.poseMs * 0.9 + (performance.now() - p0) * 0.1
+      if (lastFrameAt) perf.fps = perf.fps * 0.9 + (1000 / Math.max(1, p0 - lastFrameAt)) * 0.1
+      lastFrameAt = p0
+      // landmarks, not poseToSample: tricks include horizontal/seated poses the upright readiness check rejects
+      const tev = recRef.current.push(t, lm)
+      if (tev) optsRef.current.onTrick?.(tev)
+      perf.trickMs = recRef.current.costMs
       const s = poseToSample(lm)
       const events = jdRef.current.push({ t, y: s.y, scale: s.scale })
 
@@ -114,11 +140,13 @@ export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useM
         else if (e.reason === 'lost') c.lost++
         optsRef.current.onEvent?.(e)
       }
-      const next = { ...c, pose: s.status, streak: jdRef.current.currentStreak, activity: jdRef.current.activity }
+      const cur = recRef.current.shown
+      const next = { ...c, pose: s.status, streak: jdRef.current.currentStreak, activity: jdRef.current.activity, trick: cur.label, trickScore: Math.round(cur.score * 20) / 20 }
       countsRef.current = next
       setSnap((prev) =>
         prev.pose === next.pose && prev.jumps === next.jumps && prev.streak === next.streak && prev.trips === next.trips &&
-        prev.lost === next.lost && prev.activity === next.activity
+        prev.lost === next.lost && prev.activity === next.activity &&
+        prev.trick === next.trick && prev.trickScore === next.trickScore
           ? prev
           : next,
       )
@@ -168,7 +196,7 @@ export function usePoseTracking({ videoRef, overlayRef, signalRef, running, useM
     loadModel()
   }, [loadModel])
 
-  return { model, snap, reset, retryModel }
+  return { model, snap, reset, retryModel, perfRef }
 }
 
 /** Debug plot of the body-height signal (up = body higher) with purple ticks at counted jumps. */

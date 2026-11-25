@@ -26,3 +26,8 @@ dist-ssr
 public/dev-ca.crt
 
 .vercel
+
+# trick-recognition data (local only: landmarks, annotations, pose model, venv)
+ml/data/
+ml/.venv/
+__pycache__/

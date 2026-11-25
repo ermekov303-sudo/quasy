@@ -1,19 +1,29 @@
 import { AlertTriangle, PartyPopper, Pause, Play } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { formatDuration } from '../../lib/format'
 import { computeMetrics } from '../../metrics/workoutMetrics'
 import { Button } from '../../ui/Button'
 import { Card, StatCard } from '../../ui/Card'
 import { Dialog } from '../../ui/Dialog'
+import type { WindowLabel } from '../../recognition/classifier'
 import type { PoseStatus } from '../../vision/poseSignal'
+import type { TrackingPerf } from '../../vision/usePoseTracking'
 import { beep } from '../../workout/sound'
 import { useWorkout } from '../../workout/workoutStore'
+import { TrickPanel } from './TrickPanel'
 
 const TICK_MS = 250
 
-type Props = { pose: PoseStatus; trackingOk: boolean; onPause: () => void; onResume: () => void; onEnd: () => Promise<void> }
+type Props = {
+  pose: PoseStatus
+  trackingOk: boolean
+  trick: WindowLabel
+  trickScore: number
+  perfRef: RefObject<TrackingPerf>
+  onPause: () => void; onResume: () => void; onEnd: () => Promise<void>
+}
 
-export function LivePanel({ pose, trackingOk, onPause, onResume, onEnd }: Props) {
+export function LivePanel({ pose, trackingOk, trick, trickScore, perfRef, onPause, onResume, onEnd }: Props) {
   const w = useWorkout()
   const [, setTick] = useState(0)
   const [confirm, setConfirm] = useState(false)
@@ -100,6 +110,8 @@ export function LivePanel({ pose, trackingOk, onPause, onResume, onEnd }: Props)
         <StatCard label="Max JPM" value={String(Math.round(m.maxJpm))} />
         <StatCard label="Trips" value={String(m.trips)} />
       </section>
+
+      <TrickPanel trick={trick} score={trickScore} perfRef={perfRef} />
 
       {(target || planned) && (
         <Card className="mt-3">

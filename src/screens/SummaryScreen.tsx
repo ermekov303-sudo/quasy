@@ -5,7 +5,8 @@ import { Link, useParams } from 'react-router'
 import { formatDuration } from '../lib/format'
 import { buildTimeline, prStatus } from '../metrics/analytics'
 import { computeMetrics } from '../metrics/workoutMetrics'
-import { db } from '../storage/db'
+import { summarizeTricks, trickName } from '../recognition/summary'
+import { db, type WorkoutRecord } from '../storage/db'
 import { Button, buttonClass } from '../ui/Button'
 import { Card, SectionTitle, StatCard } from '../ui/Card'
 import { EmptyState } from '../ui/EmptyState'
@@ -118,6 +119,13 @@ export function SummaryScreen() {
         </Card>
       </section>
 
+      {w.tricks && (
+        <section className="mt-8">
+          <SectionTitle>Tricks · beta</SectionTitle>
+          <TrickSummary tricks={w.tricks} jumps={w.jumps} />
+        </section>
+      )}
+
       {w.target !== null && (
         <section className="mt-8">
           <SectionTitle>Target performance</SectionTitle>
@@ -199,5 +207,31 @@ function Bar({ label, value, max, className }: { label: string; value: number; m
       </span>
       <span className="tabular text-right font-semibold">{value}</span>
     </div>
+  )
+}
+
+function TrickSummary({ tricks, jumps }: { tricks: NonNullable<WorkoutRecord['tricks']>; jumps: number[] }) {
+  const rows = summarizeTricks(tricks, jumps)
+  if (!rows.length)
+    return <Card className="text-sm text-muted">No tricks recognized. Detection covers 8 tricks and is in beta.</Card>
+  return (
+    <Card>
+      <div className="grid grid-cols-2 gap-2">
+        <StatCard label="Tricks" value={String(tricks.length)} accent />
+        <StatCard label="Unique" value={String(rows.length)} />
+      </div>
+      <ul className="mt-4 divide-y divide-line text-sm" aria-label="Recognized tricks">
+        {rows.map((r) => (
+          <li key={r.trickId} className="flex items-baseline justify-between gap-2 py-2">
+            <span className="font-semibold">{trickName(r.trickId)}</span>
+            <span className="tabular text-muted">
+              ×{r.runs}
+              {r.jumps ? ` · ${r.jumps} jumps` : ''} · best {Math.round(r.bestScore * 100)}% · first {formatDuration(r.firstMs)}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-3 text-xs text-muted">One continuous run counts once. Recognized from body movement only; the rope isn't seen.</p>
+    </Card>
   )
 }

@@ -2,6 +2,7 @@ import { Film, RefreshCw, RotateCcw, SwitchCamera } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useVideoSource } from '../../camera/useVideoSource'
+import type { TrickEvent } from '../../recognition/events'
 import { Button } from '../../ui/Button'
 import { Page } from '../../ui/Page'
 import { ScreenHeader } from '../../ui/ScreenHeader'
@@ -40,6 +41,7 @@ export function WorkoutScreen() {
   const onEvent = useCallback((e: Parameters<ReturnType<typeof useWorkout.getState>['onDetector']>[0]) => {
     useWorkout.getState().onDetector(e)
   }, [])
+  const onTrick = useCallback((e: TrickEvent) => useWorkout.getState().onTrick(e), [])
   const tracking = usePoseTracking({
     videoRef,
     overlayRef,
@@ -48,6 +50,7 @@ export function WorkoutScreen() {
     useMediaTime: src.kind === 'file' && phase === 'setup', // in a workout, time is the workout clock
     showOverlay: overlay,
     onEvent: phase === 'live' ? onEvent : undefined,
+    onTrick: phase === 'live' ? onTrick : undefined,
   })
 
   // keep the URL in step with the phase (browser back, direct links)
@@ -111,6 +114,7 @@ export function WorkoutScreen() {
   return (
     <Page>
       {phase === 'setup' ? <ScreenHeader title={benchmarkMs ? 'Benchmark test' : 'Workout setup'} backTo={benchmarkMs ? '/records' : '/'} /> : <div className="h-3" />}
+      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
       <CameraPreview
         videoRef={videoRef}
         overlayRef={overlayRef}
@@ -118,7 +122,7 @@ export function WorkoutScreen() {
         model={tracking.model}
         pose={tracking.snap.pose}
         onPickFile={() => fileRef.current?.click()}
-        className={phase === 'setup' ? 'aspect-[3/4]' : 'h-[42svh]'}
+        className={`${phase === 'setup' ? 'aspect-[3/4]' : 'h-[42svh]'} lg:sticky lg:top-4 lg:h-auto lg:aspect-[3/4]`}
       >
         {status === 'countdown' && (
           <div className="absolute inset-0 grid place-items-center bg-black/55 text-center" role="timer" aria-live="assertive">
@@ -151,6 +155,7 @@ export function WorkoutScreen() {
         }}
       />
 
+      <div>
       {phase === 'setup' ? (
         <>
           <div className="mt-3 text-sm text-muted">
@@ -193,11 +198,16 @@ export function WorkoutScreen() {
         <LivePanel
           pose={tracking.snap.pose}
           trackingOk={live && tracking.model === 'ready'}
+          trick={tracking.snap.trick}
+          trickScore={tracking.snap.trickScore}
+          perfRef={tracking.perfRef}
           onPause={pause}
           onResume={resume}
           onEnd={end}
         />
       )}
+      </div>
+      </div>
     </Page>
   )
 }

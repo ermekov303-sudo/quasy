@@ -8,7 +8,7 @@ export function Page({ children, withNav = false }: { children: ReactNode; withN
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.22, ease: 'easeOut' }}
-      className={`mx-auto w-full max-w-md px-4 pt-safe ${withNav ? 'pb-28' : 'pb-8'}`}
+      className={`mx-auto w-full max-w-md px-4 pt-safe md:max-w-3xl md:px-8 lg:max-w-5xl ${withNav ? 'pb-28 md:pb-8' : 'pb-8'}`}
     >
       {children}
     </motion.main>

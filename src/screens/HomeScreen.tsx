@@ -51,6 +51,7 @@ export function HomeScreen() {
         </Link>
       </Card>
 
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
       <section className="mt-8">
         <SectionTitle>Today's activity</SectionTitle>
         <div className="grid grid-cols-3 gap-3">
@@ -69,6 +70,7 @@ export function HomeScreen() {
           <StatCard label="Personal record" value={pr === null ? '—' : String(pr)} unit={pr === null ? undefined : 'jumps'} accent />
         </div>
       </section>
+      </div>
 
       <section className="mt-8">
         <SectionTitle>Recent workout</SectionTitle>

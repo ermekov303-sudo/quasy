@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type { DetectorEvent } from '../detection/jumpDetector'
 import { computeMetrics } from '../metrics/workoutMetrics'
-import { db, type WorkoutRecord } from '../storage/db'
+import type { TrickEvent } from '../recognition/events'
+import { db, type TrickRecord, type WorkoutRecord } from '../storage/db'
 
 /**
  * One workout session. Time is kept on a workout clock that stops while paused:
@@ -24,17 +25,19 @@ type State = {
   pauses: number[]
   lostBreaks: number
   trackingLossMs: number
+  tricks: (TrickRecord & { seq: number })[]
   clock: (perfNow?: number) => number
   start: (config: WorkoutConfig, countdownMs: number) => void
   begin: () => void
   onDetector: (e: DetectorEvent) => void
+  onTrick: (e: TrickEvent) => void
   addTrackingLoss: (ms: number) => void
   pause: () => void
   resume: () => void
   finish: () => Promise<string>
 }
 
-const blank = { jumps: [], trips: [], pauses: [], lostBreaks: 0, trackingLossMs: 0, accMs: 0, resumedAt: 0, startedAt: 0, countdownUntil: 0 }
+const blank = { jumps: [], trips: [], tricks: [], pauses: [], lostBreaks: 0, trackingLossMs: 0, accMs: 0, resumedAt: 0, startedAt: 0, countdownUntil: 0 }
 
 export const useWorkout = create<State>()((set, get) => ({
   status: 'idle',
@@ -62,6 +65,15 @@ export const useWorkout = create<State>()((set, get) => ({
     if (e.type === 'jump') set({ jumps: [...s.jumps, Math.max(0, s.clock(e.t))] })
     else if (e.reason === 'trip') set({ trips: [...s.trips, Math.max(0, s.clock(e.lastJumpT))] })
     else if (e.reason === 'lost') set({ lostBreaks: s.lostBreaks + 1 })
+  },
+
+  /** Recognizer re-sends a run as it grows (same seq): upsert, so one run stays one event. */
+  onTrick: (e) => {
+    const s = get()
+    if (s.status !== 'running') return
+    const rec = { seq: e.seq, trickId: e.trickId, startMs: Math.max(0, s.clock(e.startT)), endMs: Math.max(0, s.clock(e.endT)), score: e.score }
+    const i = s.tricks.findIndex((x) => x.seq === e.seq)
+    set({ tricks: i < 0 ? [...s.tricks, rec] : s.tricks.map((x, j) => (j === i ? { ...rec, startMs: x.startMs } : x)) })
   },
 
   addTrackingLoss: (ms) => get().status === 'running' && set({ trackingLossMs: get().trackingLossMs + ms }),
@@ -95,6 +107,7 @@ export const useWorkout = create<State>()((set, get) => ({
       weightKg: s.config.weightKg,
       lostBreaks: s.lostBreaks,
       trackingLossMs: s.trackingLossMs,
+      tricks: s.tricks.map((t) => ({ trickId: t.trickId, startMs: t.startMs, endMs: t.endMs, score: t.score })),
       totalJumps: m.totalJumps,
       activeMs: m.activeMs,
       avgJpm: m.avgJpm,
