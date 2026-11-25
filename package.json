@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@mediapipe/tasks-vision": "^1.2.3",
+    "@supabase/supabase-js": "^2.119.2",
     "dexie": "^4.4.7",
     "dexie-react-hooks": "^4.4.0",
     "framer-motion": "^14.14.0",

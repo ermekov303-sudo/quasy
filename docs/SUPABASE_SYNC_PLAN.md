@@ -1,6 +1,6 @@
 # Optional cross-device sync with Supabase — plan
 
-Status: **plan only.** Nothing is configured, no keys exist, no data leaves the device. Implementing it needs the owner's Supabase project, its URL + anon key, and explicit approval.
+Status: stage 1 (schema + RLS) applied, stage 2 (sign-in + profile/mastery sync) built. Project `ztwmdfrzmdgvjuryueak`; SQL in `supabase/migrations/`, sync code in `src/sync/`.
 
 ## Principles
 - **Dexie stays the app's database.** Every screen keeps reading IndexedDB. Supabase is a backup and sync target, so the app works fully offline and without an account.
@@ -9,18 +9,18 @@ Status: **plan only.** Nothing is configured, no keys exist, no data leaves the 
 - One new dependency when implemented: `@supabase/supabase-js`. The client gets only the public anon key (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` in Vercel). The service-role key never ships to the browser.
 
 ## Authentication
-- Supabase Auth with an email magic link (no password stored by Quasy). Google/Apple sign-in can be added later.
+- Supabase Auth with an email sign-in link (no password stored by Quasy). The default Supabase email has no code, only a link (editing it needs custom SMTP), so the link must be opened in the browser used for Quasy (implicit flow). Google/Apple sign-in can be added later.
 - Sign-in lives on Profile: "Sync across devices", with a sign-out option and a "Delete cloud data" action.
 
 ## Data model (Postgres)
 | Table | Key | Columns (main) | Source today |
 |---|---|---|---|
-| `profiles` | `id uuid` = `auth.uid()` | `name`, `weight_kg`, `photo_path`, `updated_at` | `quasy-setup` (localStorage) |
+| `profiles` | `id uuid` = `auth.uid()` | `name`, `weight_kg`, `photo` (256 px JPEG data URL, ≤150 KB), `updated_at` | `quasy-setup` (localStorage) |
 | `workouts` | `id uuid` (the client's `crypto.randomUUID()`) | `user_id`, `started_at`, `ended_at`, `elapsed_ms`, `active_ms`, `total_jumps`, `avg_jpm`, `max_jpm`, `max_streak`, `calories`, `target`, `planned_ms`, `weight_kg`, `benchmark_ms`, `lost_breaks`, `tracking_loss_ms`, `log jsonb` (jumps/trips/pauses), `updated_at`, `deleted_at` | Dexie `workouts` |
 | `trick_events` | unique `(workout_id, trick_id, start_ms)` | `user_id`, `workout_id` → `workouts` (on delete cascade), `trick_id` (check: one of the 8 recognized ids), `start_ms`, `end_ms`, `score` | `WorkoutRecord.tricks` |
 | `trick_mastery` | `(user_id, trick_id)` | `status` (`not-started`/`learning`/`mastered`), `updated_at` | `quasy-tricks` (localStorage) |
 
-- Avatar photo: private Storage bucket `avatars/{user_id}/avatar.jpg` (it's already a 256 px JPEG).
+- Avatar photo: stored in the profile row (protected by the same RLS), no Storage bucket needed.
 - Old workouts without `tricks` upload with no `trick_events` rows. They stay "no data", never "0 tricks".
 - `trick_events` and `trick_mastery` stay separate: detection never writes mastery.
 
@@ -28,7 +28,6 @@ Status: **plan only.** Nothing is configured, no keys exist, no data leaves the 
 - RLS enabled on every table. No table is readable or writable without a policy.
 - `workouts`, `trick_events`, `trick_mastery`: select/insert/update/delete only where `user_id = auth.uid()`. `user_id` defaults to `auth.uid()`, and a `with check` rule stops anyone writing rows for another user.
 - `profiles`: only `id = auth.uid()`.
-- Storage: the object path must start with `auth.uid()`.
 - Deleting the account removes all rows (cascade) and the avatar.
 
 ## Offline sync and duplicate prevention

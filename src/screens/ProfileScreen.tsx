@@ -9,6 +9,7 @@ import { Dialog } from '../ui/Dialog'
 import { Page } from '../ui/Page'
 import { WeightField } from '../ui/WeightField'
 import { useSetupPrefs } from '../workout/setupPrefs'
+import { SyncCard } from './SyncCard'
 
 type Open = 'edit' | 'weight' | 'camera' | 'data' | 'confirmClear' | 'about' | null
 
@@ -76,6 +77,8 @@ export function ProfileScreen() {
           <div className="text-sm text-muted">{prefs.weightKg ? `${prefs.weightKg} kg` : 'Body weight not set'}</div>
         </div>
       </Card>
+
+      <SyncCard />
 
       <section className="mt-8">
         <SectionTitle>Settings</SectionTitle>
