@@ -6,7 +6,7 @@ import { formatDuration } from '../lib/format'
 import { computeMetrics } from '../metrics/workoutMetrics'
 import { levelCounts } from '../recognition/summary'
 import { db, type WorkoutRecord } from '../storage/db'
-import { jumpBuckets, rangeStart, startOfWeek, totals, type Range } from '../storage/queries'
+import { jumpBuckets, periodSummary, rangeStart, startOfMonth, startOfWeek, totals, trainingStreaks, type Range } from '../storage/queries'
 import { buttonClass } from '../ui/Button'
 import { Card, SectionTitle, StatCard } from '../ui/Card'
 import { ActivityHeatmap, JpmLineChart, JumpsBarChart } from '../ui/charts'
@@ -98,9 +98,12 @@ export function ProgressScreen() {
       </div>
 
       {!ws.length ? (
+        <>
         <div className="mt-6">
           <EmptyState icon={LineChart} title="No workouts in this period" text="Pick a longer range or start a new workout." />
         </div>
+        <ActivitySection all={all} heatDays={heatDays} />
+        </>
       ) : (
         <>
           <section className="mt-6">
@@ -164,14 +167,7 @@ export function ProgressScreen() {
             </div>
           </section>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-6 xl:grid-cols-3">
-            <section>
-              <SectionTitle>Activity · last 12 weeks</SectionTitle>
-              <Card className="p-4">
-                <ActivityHeatmap days={heatDays} />
-              </Card>
-            </section>
-
+          <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-6">
             <section>
               <SectionTitle>Detected tricks · beta</SectionTitle>
               <Card className="p-4">
@@ -199,6 +195,8 @@ export function ProgressScreen() {
               </Card>
             </section>
           </div>
+
+          <ActivitySection all={all} heatDays={heatDays} />
 
           <section className="mt-8">
             <SectionTitle>Workout history</SectionTitle>
@@ -263,6 +261,67 @@ export function ProgressScreen() {
         </>
       )}
     </Page>
+  )
+}
+
+const minutes = (ms: number) => `${Math.round(ms / 60_000)}`
+
+/** Calendar activity over real workouts (always all data, independent of the range filter). */
+function ActivitySection({ all, heatDays }: { all: WorkoutRecord[]; heatDays: ReturnType<typeof jumpBuckets> }) {
+  const streak = trainingStreaks(all)
+  const activeDays = heatDays.filter((d) => d.workouts > 0).length
+  const activeMs = heatDays.reduce((s, d) => s + d.activeMs, 0)
+  const week = startOfWeek()
+  const month = startOfMonth()
+  const lastMonth = startOfMonth(new Date(month - 1))
+  const end = Date.now() + 1
+  const rows = [
+    { label: 'This week', ...periodSummary(all, week, end) },
+    { label: 'Last week', ...periodSummary(all, startOfWeek(new Date(week - 1)), week) },
+    { label: 'This month', ...periodSummary(all, month, end) },
+    { label: 'Last month', ...periodSummary(all, lastMonth, month) },
+  ]
+  return (
+    <section className="mt-8">
+      <SectionTitle>Activity · last 12 weeks</SectionTitle>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <StatCard label="Current streak" value={String(streak.current)} unit={streak.current === 1 ? 'day' : 'days'} accent />
+        <StatCard label="Longest streak" value={String(streak.longest)} unit={streak.longest === 1 ? 'day' : 'days'} />
+        <StatCard label="Active days" value={String(activeDays)} unit={`of ${heatDays.length}`} />
+        <StatCard label="Active time" value={minutes(activeMs)} unit="min" />
+      </div>
+      <div className="mt-3 grid gap-3 lg:grid-cols-2">
+        <Card className="min-w-0 p-4">
+          <ActivityHeatmap days={heatDays} />
+        </Card>
+        <Card className="min-w-0 overflow-x-auto p-0">
+          <table className="w-full text-sm">
+            <caption className="sr-only">Weekly and monthly activity</caption>
+            <thead className="text-[11px] uppercase text-muted sm:text-xs sm:tracking-wider">
+              <tr className="border-b border-line/60">
+                <th scope="col" className="px-3 py-3 text-left font-medium sm:px-4"><span className="sr-only">Period</span></th>
+                <th scope="col" className="px-2 py-3 text-right font-medium">Workouts</th>
+                <th scope="col" className="px-2 py-3 text-right font-medium">Jumps</th>
+                <th scope="col" className="px-2 py-3 text-right font-medium">Min</th>
+                <th scope="col" className="px-3 py-3 text-right font-medium sm:px-4">Days</th>
+              </tr>
+            </thead>
+            <tbody className="tabular">
+              {rows.map((r) => (
+                <tr key={r.label} className="border-b border-line/40 last:border-0">
+                  <th scope="row" className="whitespace-nowrap px-3 py-3 text-left font-medium sm:px-4">{r.label}</th>
+                  <td className="px-2 py-3 text-right">{r.workouts}</td>
+                  <td className="px-2 py-3 text-right font-semibold">{r.jumps}</td>
+                  <td className="px-2 py-3 text-right">{minutes(r.activeMs)}</td>
+                  <td className="px-3 py-3 text-right sm:px-4">{r.activeDays}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="px-4 pb-4 text-xs text-muted">Min = active jumping time. A streak counts calendar days with at least one workout.</p>
+        </Card>
+      </div>
+    </section>
   )
 }
 

@@ -51,3 +51,45 @@ export function totals(ws: WorkoutRecord[]) {
     avgJpm: activeMs > 0 ? (jumps / activeMs) * 60_000 : 0,
   }
 }
+
+const addDays = (t: number, n: number) => {
+  const d = new Date(t)
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + n).getTime() // local calendar day, DST-safe
+}
+
+export function startOfMonth(d = new Date()): number {
+  return new Date(d.getFullYear(), d.getMonth(), 1).getTime()
+}
+
+/**
+ * Training streaks in local calendar days with at least one workout.
+ * `current` still counts when today has no workout yet but yesterday had one (the streak isn't broken until the day ends).
+ */
+export function trainingStreaks(ws: { startedAt: number }[], now = new Date()) {
+  const days = [...new Set(ws.map((w) => startOfDay(new Date(w.startedAt))))].sort((a, b) => a - b)
+  let longest = 0
+  let run = 0
+  days.forEach((d, i) => {
+    run = i > 0 && addDays(days[i - 1], 1) === d ? run + 1 : 1
+    longest = Math.max(longest, run)
+  })
+  const has = new Set(days)
+  let cursor = has.has(startOfDay(now)) ? startOfDay(now) : addDays(startOfDay(now), -1)
+  let current = 0
+  while (has.has(cursor)) {
+    current++
+    cursor = addDays(cursor, -1)
+  }
+  return { current, longest }
+}
+
+/** Workouts, jumps, active time and distinct active days for workouts started in [from, to). */
+export function periodSummary(ws: { startedAt: number; totalJumps: number; activeMs: number }[], from: number, to: number) {
+  const in_ = ws.filter((w) => w.startedAt >= from && w.startedAt < to)
+  return {
+    workouts: in_.length,
+    jumps: in_.reduce((s, w) => s + w.totalJumps, 0),
+    activeMs: in_.reduce((s, w) => s + w.activeMs, 0),
+    activeDays: new Set(in_.map((w) => startOfDay(new Date(w.startedAt)))).size,
+  }
+}

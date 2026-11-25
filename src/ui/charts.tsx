@@ -126,6 +126,7 @@ export function ActivityHeatmap({ days }: { days: Day[] }) {
             type="button"
             onClick={() => setPicked(d)}
             onFocus={() => setPicked(d)}
+            onMouseEnter={() => setPicked(d)}
             aria-label={describe(d)}
             title={describe(d)}
             className={`aspect-square w-full rounded-[3px] ${level(d.activeMs) ? '' : 'bg-surface-2'} ${show?.start === d.start ? 'ring-1 ring-fg' : ''}`}

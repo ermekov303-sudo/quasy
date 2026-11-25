@@ -1,6 +1,6 @@
 import { expect, test } from 'vitest'
 import type { WorkoutRecord } from './db'
-import { jumpBuckets, rangeStart, startOfWeek, totals } from './queries'
+import { jumpBuckets, periodSummary, rangeStart, startOfMonth, startOfWeek, totals, trainingStreaks } from './queries'
 
 test('range + daily/weekly buckets include empty days and sum workouts', () => {
   const now = new Date(2026, 10, 25, 12) // Wed
@@ -44,4 +44,23 @@ test('daily buckets sum active time and keep empty days across a month boundary'
   ]
   const days = jumpBuckets(ws, new Date(2026, 10, 29).getTime(), 'day', now)
   expect(days.map((d) => d.activeMs)).toEqual([0, 60_000, 0, 30_000])
+})
+
+test('training streaks: consecutive local days, today optional, longest kept', () => {
+  const at = (m: number, d: number, h = 10) => ({ startedAt: new Date(2026, m, d, h).getTime() })
+  const now = new Date(2026, 10, 25, 9) // no workout yet today
+  const ws = [at(10, 1), at(10, 2), at(10, 3), at(10, 4), at(10, 10), at(10, 23, 23), at(10, 24, 7), at(10, 24, 20)]
+  expect(trainingStreaks(ws, now)).toEqual({ current: 2, longest: 4 })
+  expect(trainingStreaks([...ws, at(10, 25, 8)], now).current).toBe(3)
+  expect(trainingStreaks([at(10, 22)], now).current).toBe(0) // two days ago: broken
+  expect(trainingStreaks([], now)).toEqual({ current: 0, longest: 0 })
+  // across a month boundary
+  expect(trainingStreaks([at(9, 31), at(10, 1)], new Date(2026, 10, 1, 12))).toEqual({ current: 2, longest: 2 })
+})
+
+test('period summary counts distinct active days in [from, to)', () => {
+  const w = (d: number, h: number, totalJumps: number) => ({ startedAt: new Date(2026, 10, d, h).getTime(), totalJumps, activeMs: 60_000 })
+  const ws = [w(1, 9, 10), w(1, 18, 20), w(3, 9, 5), w(30, 9, 1)]
+  const from = startOfMonth(new Date(2026, 10, 15))
+  expect(periodSummary(ws, from, new Date(2026, 10, 30).getTime())).toEqual({ workouts: 3, jumps: 35, activeMs: 180_000, activeDays: 2 })
 })
