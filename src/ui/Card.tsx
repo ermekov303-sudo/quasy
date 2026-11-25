@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return <div className={`rounded-[var(--radius-card)] bg-surface p-5 ${className}`}>{children}</div>
+  return <div className={`rounded-[var(--radius-card)] border border-line/60 bg-surface p-5 ${className}`}>{children}</div>
 }
 
 /** Large readable number with a muted label. `unit` is shown small after the value; `delta` = % change vs a previous period. */

@@ -2,13 +2,13 @@ import { Search, SearchX } from 'lucide-react'
 import { useSearchParams } from 'react-router'
 import { filterTricks, trickProgress } from '../../metrics/trickLibrary'
 import { useTrickStatus } from '../../tricks/trickStatus'
-import { CATEGORIES, CATEGORY_META, LEVEL_META, LEVELS, TRICKS, type CategoryId, type Level } from '../../tricks/tricks'
+import { CATEGORIES, CATEGORY_META, LEVEL_META, LEVELS, TRICKS, type CategoryId } from '../../tricks/tricks'
 import { Button } from '../../ui/Button'
 import { Card, SectionTitle, StatCard } from '../../ui/Card'
 import { Choice } from '../../ui/Choice'
 import { EmptyState } from '../../ui/EmptyState'
 import { Page } from '../../ui/Page'
-import { CategoryCard, DifficultyBadge, ProgressBar, TrickCard } from './parts'
+import { CategoryCard, LevelMastery, ProgressBar, TrickCard } from './parts'
 
 const pick = <T extends string>(list: readonly T[], v: string | null) => (list.includes(v as T) ? (v as T) : null)
 
@@ -37,13 +37,14 @@ export function TrickLibraryScreen() {
         <p className="text-sm text-muted">Explore. Learn. Master.</p>
       </header>
 
+      <div className="grid gap-3 lg:grid-cols-2">
       <div className="grid grid-cols-3 gap-3">
         <StatCard label="Total Tricks" value={String(TRICKS.length)} />
         <StatCard label="Categories" value={String(CATEGORIES.length)} />
         <StatCard label="Difficulty Levels" value={String(LEVELS.length)} />
       </div>
 
-      <Card className="mt-3">
+      <Card>
         <div className="flex items-baseline justify-between">
           <span className="text-sm font-semibold">Your Progress</span>
           <span className="tabular font-bold">
@@ -65,8 +66,9 @@ export function TrickLibraryScreen() {
             </div>
           ))}
         </div>
-        <p className="mt-3 text-xs text-muted">You set each trick's status yourself. Quasy doesn't recognise tricks from the camera yet.</p>
+        <p className="mt-3 text-xs text-muted">You set each trick's status yourself. Camera trick detection (beta) never changes it.</p>
       </Card>
+      </div>
 
       <section className="mt-6" aria-label="Search and filters">
         <label className="relative block">
@@ -77,10 +79,10 @@ export function TrickLibraryScreen() {
             value={query}
             onChange={(e) => setParam('q', e.target.value)}
             placeholder="Search tricks..."
-            className="h-12 w-full rounded-full bg-surface pl-11 pr-4 text-fg outline-none placeholder:text-muted focus:ring-2 focus:ring-accent-fg"
+            className="h-12 w-full rounded-full border border-line/60 bg-surface pl-11 pr-4 text-fg outline-none placeholder:text-muted focus:ring-2 focus:ring-accent-fg"
           />
         </label>
-        <div role="group" aria-label="Category filter" className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
+        <div role="group" aria-label="Category filter" className="-mx-4 mt-3 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
           <Choice selected={!category} onClick={() => setParam('cat', null)}>All categories</Choice>
           {CATEGORIES.map((c) => (
             <Choice key={c} selected={category === c} onClick={() => setParam('cat', category === c ? null : c)}>
@@ -88,7 +90,7 @@ export function TrickLibraryScreen() {
             </Choice>
           ))}
         </div>
-        <div role="group" aria-label="Difficulty filter" className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
+        <div role="group" aria-label="Difficulty filter" className="-mx-4 mt-2 flex gap-2 overflow-x-auto px-4 pb-1 md:mx-0 md:flex-wrap md:px-0 [&>*]:shrink-0 [&>*]:whitespace-nowrap">
           <Choice selected={!level} onClick={() => setParam('level', null)}>All levels</Choice>
           {LEVELS.map((l) => (
             <Choice key={l} selected={level === l} onClick={() => setParam('level', level === l ? null : l)}>
@@ -108,7 +110,7 @@ export function TrickLibraryScreen() {
         <section className="mt-6">
           <SectionTitle>{results.length} {results.length === 1 ? 'trick' : 'tricks'} found</SectionTitle>
           {results.length ? (
-            <ul className="flex flex-col gap-3">
+            <ul className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
               {results.map((t) => <TrickCard key={t.id} trick={t} />)}
             </ul>
           ) : (
@@ -124,11 +126,12 @@ export function TrickLibraryScreen() {
         <>
           <section className="mt-6">
             <SectionTitle>Categories</SectionTitle>
-            <ul className="flex flex-col gap-3">
+            <ul className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
               {CATEGORIES.map((c) => <CategoryCard key={c} id={c} mastered={p.byCategory[c].mastered} />)}
             </ul>
           </section>
 
+          <div className="lg:grid lg:grid-cols-2 lg:gap-6">
           <section className="mt-6">
             <SectionTitle>Progress by category</SectionTitle>
             <Card className="flex flex-col gap-4">
@@ -146,18 +149,11 @@ export function TrickLibraryScreen() {
 
           <section className="mt-6">
             <SectionTitle>Progress by difficulty</SectionTitle>
-            <Card className="flex flex-col gap-4">
-              {LEVELS.map((l: Level) => (
-                <div key={l}>
-                  <div className="mb-1.5 flex items-center justify-between text-sm">
-                    <DifficultyBadge level={l} />
-                    <span className="tabular text-muted">{p.byLevel[l].mastered}/{p.byLevel[l].total}</span>
-                  </div>
-                  <ProgressBar value={p.byLevel[l].mastered} total={p.byLevel[l].total} label={`${LEVEL_META[l].label} mastered`} />
-                </div>
-              ))}
+            <Card>
+              <LevelMastery />
             </Card>
           </section>
+          </div>
         </>
       )}
     </Page>

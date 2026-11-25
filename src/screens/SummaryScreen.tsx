@@ -5,7 +5,7 @@ import { Link, useParams } from 'react-router'
 import { formatDuration } from '../lib/format'
 import { buildTimeline, prStatus } from '../metrics/analytics'
 import { computeMetrics } from '../metrics/workoutMetrics'
-import { summarizeTricks, trickName } from '../recognition/summary'
+import { levelCounts, summarizeTricks, trickName } from '../recognition/summary'
 import { db, type WorkoutRecord } from '../storage/db'
 import { Button, buttonClass } from '../ui/Button'
 import { Card, SectionTitle, StatCard } from '../ui/Card'
@@ -14,6 +14,7 @@ import { Page } from '../ui/Page'
 import { ScreenHeader } from '../ui/ScreenHeader'
 import { StreakList } from './summary/StreakList'
 import { Timeline } from './summary/Timeline'
+import { LevelDistribution } from './tricks/parts'
 
 export function SummaryScreen() {
   const { id = '' } = useParams()
@@ -89,9 +90,10 @@ export function SummaryScreen() {
         Active jumping {formatDuration(m.activeMs)} · resting {formatDuration(m.restMs)} · calories are an estimate.
       </p>
 
+      <div className="lg:grid lg:grid-cols-2 lg:gap-6">
       <section className="mt-8">
         <SectionTitle>Jumping performance</SectionTitle>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-2">
           <StatCard label="Average JPM" value={String(Math.round(m.avgJpm))} />
           <StatCard label="Max JPM" value={String(Math.round(m.maxJpm))} accent />
           <StatCard label="Final JPM" value={String(Math.round(m.finalJpm))} />
@@ -101,7 +103,7 @@ export function SummaryScreen() {
 
       <section className="mt-8">
         <SectionTitle>Streak analytics</SectionTitle>
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-2">
           <StatCard label="Max streak" value={String(m.maxStreak)} unit="jumps" accent />
           <StatCard label="Streak at end" value={String(m.streaks.at(-1)?.jumps ?? 0)} unit="jumps" />
           <StatCard label="Avg streak JPM" value={String(Math.round(m.avgStreakJpm))} />
@@ -111,6 +113,7 @@ export function SummaryScreen() {
           <StreakList streaks={m.streaks} segments={segments} />
         </div>
       </section>
+      </div>
 
       <section className="mt-8">
         <SectionTitle>Jump / rest timeline</SectionTitle>
@@ -119,6 +122,7 @@ export function SummaryScreen() {
         </Card>
       </section>
 
+      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
       {w.tricks && (
         <section className="mt-8">
           <SectionTitle>Tricks · beta</SectionTitle>
@@ -181,8 +185,9 @@ export function SummaryScreen() {
           <p className="mt-3 text-xs text-muted">Record = total jumps in one workout.</p>
         </Card>
       </section>
+      </div>
 
-      <div className="mt-8 grid gap-2">
+      <div className="mt-8 grid gap-2 sm:grid-cols-3">
         {/* Saved when the workout was ended; shown as a state so a second tap can never duplicate it. */}
         <Button size="lg" full variant="secondary" disabled aria-label="Workout saved">
           <CircleCheck size={18} className="text-success" aria-hidden /> Workout saved
@@ -219,6 +224,9 @@ function TrickSummary({ tricks, jumps }: { tricks: NonNullable<WorkoutRecord['tr
       <div className="grid grid-cols-2 gap-2">
         <StatCard label="Tricks" value={String(tricks.length)} accent />
         <StatCard label="Unique" value={String(rows.length)} />
+      </div>
+      <div className="mt-4">
+        <LevelDistribution counts={levelCounts(tricks)} />
       </div>
       <ul className="mt-4 divide-y divide-line text-sm" aria-label="Recognized tricks">
         {rows.map((r) => (

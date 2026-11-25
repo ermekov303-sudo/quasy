@@ -44,7 +44,7 @@ export function CategoryScreen() {
           <SafetyNote />
         </div>
       )}
-      <ul className="mt-4 flex flex-col gap-3">
+      <ul className="mt-4 grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
         {tricks.map((t) => <TrickCard key={t.id} trick={t} showCategory={false} />)}
       </ul>
     </Page>

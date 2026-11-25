@@ -4,7 +4,7 @@ import { classify, dtw, type Decision } from './classifier'
 import { TrickEventTracker } from './events'
 import { frameFeatures, MotionBuffer } from './features'
 import { TrickRecognizer } from './recognizer'
-import { summarizeTricks } from './summary'
+import { levelCounts, summarizeTricks } from './summary'
 
 const S = 0.2 // torso length in image units
 
@@ -201,4 +201,9 @@ describe('workout trick summary', () => {
       { trickId: 'skier', runs: 2, jumps: 2, bestScore: 0.8, firstMs: 5000 },
     ])
   })
+})
+
+test('levelCounts groups trick runs by library level, zeros kept, unknown ids skipped', () => {
+  const r = (trickId: string) => ({ trickId, startMs: 0, endMs: 1, score: 1 })
+  expect(levelCounts([r('skier'), r('skier'), r('side-straddle'), r('nope')])).toEqual({ easy: 0, medium: 1, rare: 2, hard: 0, epic: 0 })
 })

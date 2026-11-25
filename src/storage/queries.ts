@@ -21,18 +21,19 @@ export function rangeStart(range: Range, ws: { startedAt: number }[], now = new 
   return d.getTime()
 }
 
-/** Total jumps per day or per week (Mon) from `from` to today, empty buckets included. */
-export function jumpBuckets(ws: { startedAt: number; totalJumps: number }[], from: number, by: 'day' | 'week', now = new Date()) {
-  const out: { start: number; jumps: number; workouts: number }[] = []
+/** Jumps, workouts and active time per local day or week (Mon) from `from` to today, empty buckets included. */
+export function jumpBuckets(ws: { startedAt: number; totalJumps: number; activeMs?: number }[], from: number, by: 'day' | 'week', now = new Date()) {
+  const out: { start: number; jumps: number; workouts: number; activeMs: number }[] = []
   const first = by === 'week' ? startOfWeek(new Date(from)) : from
   for (let d = new Date(first); d.getTime() <= now.getTime(); d.setDate(d.getDate() + (by === 'week' ? 7 : 1)))
-    out.push({ start: d.getTime(), jumps: 0, workouts: 0 })
+    out.push({ start: d.getTime(), jumps: 0, workouts: 0, activeMs: 0 })
   for (const w of ws) {
     const key = by === 'week' ? startOfWeek(new Date(w.startedAt)) : startOfDay(new Date(w.startedAt))
     const b = out.find((x) => x.start === key)
     if (b) {
       b.jumps += w.totalJumps
       b.workouts++
+      b.activeMs += w.activeMs ?? 0
     }
   }
   return out

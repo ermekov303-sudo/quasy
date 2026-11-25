@@ -35,3 +35,13 @@ test('totals: avg JPM is per active minute across workouts', () => {
   expect(t.avgJpm).toBeCloseTo(140)
   expect(totals([]).avgJpm).toBe(0)
 })
+
+test('daily buckets sum active time and keep empty days across a month boundary', () => {
+  const now = new Date(2026, 11, 2, 8)
+  const ws = [
+    { startedAt: new Date(2026, 10, 30, 23, 30).getTime(), totalJumps: 10, activeMs: 60_000 },
+    { startedAt: new Date(2026, 11, 2, 7).getTime(), totalJumps: 5, activeMs: 30_000 },
+  ]
+  const days = jumpBuckets(ws, new Date(2026, 10, 29).getTime(), 'day', now)
+  expect(days.map((d) => d.activeMs)).toEqual([0, 60_000, 0, 30_000])
+})

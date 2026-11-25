@@ -23,7 +23,7 @@ export function RecordsScreen() {
   const recs = all ? personalRecords(all) : {}
 
   return (
-    <Page withNav>
+    <Page withNav narrow>
       <header className="py-4">
         <h1 className="text-2xl font-extrabold tracking-tight">Records</h1>
         <p className="text-sm text-muted">Personal bests and benchmark tests.</p>

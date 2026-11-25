@@ -1,6 +1,6 @@
 import { Check, Circle, Clock, Dumbbell, Footprints, Hand, Repeat, ShieldAlert, Spline, type LucideIcon } from 'lucide-react'
 import { Link } from 'react-router'
-import { statusOf, type TrickStatus } from '../../metrics/trickLibrary'
+import { statusOf, trickProgress, type TrickStatus } from '../../metrics/trickLibrary'
 import { useTrickStatus } from '../../tricks/trickStatus'
 import { CATEGORY_META, LEVEL_META, LEVELS, TRICKS, type CategoryId, type Level, type Trick } from '../../tricks/tricks'
 import { Choice } from '../../ui/Choice'
@@ -73,8 +73,8 @@ export function TrickCard({ trick, showCategory = true }: { trick: Trick; showCa
   const setStatus = useTrickStatus((s) => s.setStatus)
   const next = STATUS_ORDER[(STATUS_ORDER.indexOf(status) + 1) % STATUS_ORDER.length]
   return (
-    <li className="rounded-[var(--radius-card)] bg-surface">
-      <Link to={`/tricks/t/${trick.id}`} className="flex gap-3 rounded-t-[var(--radius-card)] p-4 pb-2 transition-colors hover:bg-surface-2/50">
+    <li className="flex flex-col rounded-[var(--radius-card)] border border-line/60 bg-surface">
+      <Link to={`/tricks/t/${trick.id}`} className="flex flex-1 gap-3 rounded-t-[var(--radius-card)] p-4 pb-2 transition-colors hover:bg-surface-2/50">
         <Thumb trick={trick} />
         <div className="min-w-0 flex-1">
           <h3 className="font-semibold">{trick.name}</h3>
@@ -129,7 +129,7 @@ export function CategoryCard({ id, mastered }: { id: CategoryId; mastered: numbe
   const tricks = TRICKS.filter((t) => t.category === id)
   return (
     <li>
-      <Link to={`/tricks/c/${id}`} className="block rounded-[var(--radius-card)] bg-surface p-5 transition-colors hover:bg-surface-2/60">
+      <Link to={`/tricks/c/${id}`} className="block h-full rounded-[var(--radius-card)] border border-line/60 bg-surface p-5 transition-colors hover:bg-surface-2/60">
         <div className="flex items-center gap-3">
           <div className="grid size-11 place-items-center rounded-full bg-accent-soft text-accent-fg">
             <Icon size={22} aria-hidden />
@@ -146,6 +146,46 @@ export function CategoryCard({ id, mastered }: { id: CategoryId; mastered: numbe
         </div>
       </Link>
     </li>
+  )
+}
+
+/** Manually set mastery per difficulty level (from the Trick Library statuses, not from detection). */
+export function LevelMastery() {
+  const statuses = useTrickStatus((s) => s.statuses)
+  const p = trickProgress(TRICKS, statuses)
+  return (
+    <div className="flex flex-col gap-4">
+      {LEVELS.map((l) => (
+        <div key={l}>
+          <div className="mb-1.5 flex items-center justify-between text-sm">
+            <DifficultyBadge level={l} />
+            <span className="tabular text-muted">{p.byLevel[l].mastered}/{p.byLevel[l].total}</span>
+          </div>
+          <ProgressBar value={p.byLevel[l].mastered} total={p.byLevel[l].total} label={`${LEVEL_META[l].label} mastered`} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Detected trick runs per level: level word + count + share (colour never stands alone). */
+export function LevelDistribution({ counts }: { counts: Record<Level, number> }) {
+  const total = LEVELS.reduce((s, l) => s + counts[l], 0)
+  return (
+    <ul className="flex flex-col gap-3" aria-label="Detected tricks by level">
+      {LEVELS.map((l) => (
+        <li key={l} className="grid grid-cols-[4.5rem_1fr_4.5rem] items-center gap-3 text-sm">
+          <DifficultyBadge level={l} />
+          <span className="h-2 overflow-hidden rounded-full bg-surface-2">
+            <span className="block h-full rounded-full" style={{ width: `${total ? (counts[l] / total) * 100 : 0}%`, background: LEVEL_META[l].color }} />
+          </span>
+          <span className="tabular text-right">
+            <span className="font-semibold">{counts[l]}</span>
+            <span className="text-muted"> · {total ? Math.round((counts[l] / total) * 100) : 0}%</span>
+          </span>
+        </li>
+      ))}
+    </ul>
   )
 }
 

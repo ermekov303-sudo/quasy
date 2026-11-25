@@ -1,5 +1,5 @@
 import type { TrickRecord } from '../storage/db'
-import { TRICKS } from '../tricks/tricks'
+import { LEVELS, TRICKS, type Level } from '../tricks/tricks'
 
 export const trickName = (id: string) => TRICKS.find((t) => t.id === id)?.name ?? id
 
@@ -20,4 +20,14 @@ export function summarizeTricks(tricks: TrickRecord[], jumps: number[]): TrickSu
     rows.set(t.trickId, r)
   }
   return [...rows.values()].sort((a, b) => a.firstMs - b.firstMs)
+}
+
+/** Recognized trick runs per difficulty level (all levels present, zeros included). Unknown ids are skipped. */
+export function levelCounts(tricks: TrickRecord[]): Record<Level, number> {
+  const out = Object.fromEntries(LEVELS.map((l) => [l, 0])) as Record<Level, number>
+  for (const t of tricks) {
+    const level = TRICKS.find((x) => x.id === t.trickId)?.level
+    if (level) out[level]++
+  }
+  return out
 }

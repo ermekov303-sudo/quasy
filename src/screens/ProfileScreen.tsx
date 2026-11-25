@@ -64,7 +64,7 @@ export function ProfileScreen() {
   }
 
   return (
-    <Page withNav>
+    <Page withNav narrow>
       <header className="py-4">
         <h1 className="text-2xl font-extrabold tracking-tight">Profile</h1>
       </header>

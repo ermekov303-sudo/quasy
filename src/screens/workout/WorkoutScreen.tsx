@@ -114,7 +114,7 @@ export function WorkoutScreen() {
   return (
     <Page>
       {phase === 'setup' ? <ScreenHeader title={benchmarkMs ? 'Benchmark test' : 'Workout setup'} backTo={benchmarkMs ? '/records' : '/'} /> : <div className="h-3" />}
-      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
+      <div className="lg:grid lg:grid-cols-[auto_minmax(22rem,1fr)] lg:items-start lg:gap-6">
       <CameraPreview
         videoRef={videoRef}
         overlayRef={overlayRef}
@@ -122,7 +122,8 @@ export function WorkoutScreen() {
         model={tracking.model}
         pose={tracking.snap.pose}
         onPickFile={() => fileRef.current?.click()}
-        className={`${phase === 'setup' ? 'aspect-[3/4]' : 'h-[42svh]'} lg:sticky lg:top-4 lg:h-auto lg:aspect-[3/4]`}
+        // desktop: 3:4 portrait frame sized to the viewport height (never wider than the space left of the stats)
+        className={`${phase === 'setup' ? 'aspect-[3/4]' : 'h-[42svh]'} lg:sticky lg:top-4 lg:aspect-[3/4] lg:h-[min(calc(100svh-7rem),calc((100vw-28rem)*4/3))] lg:w-auto`}
       >
         {status === 'countdown' && (
           <div className="absolute inset-0 grid place-items-center bg-black/55 text-center" role="timer" aria-live="assertive">

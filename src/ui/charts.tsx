@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 // Validated on the dark surface (dataviz validator): series-1 purple, series-2 teal. Hex here: SVG attrs need literals.
@@ -28,10 +29,10 @@ function Tip({ active, label, payload, title = dayFmt }: TipProps) {
 
 const axisProps = { stroke: AXIS, tick: { fill: AXIS, fontSize: 11 }, tickLine: false, axisLine: false } as const
 
-export function JumpsBarChart({ data, by }: { data: { start: number; jumps: number }[]; by: 'day' | 'week' }) {
+export function JumpsBarChart({ data, by, height = 'h-52' }: { data: { start: number; jumps: number }[]; by: 'day' | 'week'; height?: string }) {
   const title = (t: number) => (by === 'week' ? `Week of ${dayFmt(t)}` : dayFmt(t))
   return (
-    <div className="h-52" role="img" aria-label={`Total jumps per ${by}`}>
+    <div className={height} role="img" aria-label={`Total jumps per ${by}`}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 8, right: 4, left: -16, bottom: 0 }} barCategoryGap={2}>
           <CartesianGrid vertical={false} stroke={GRID} />
@@ -85,6 +86,63 @@ export function JpmLineChart({ data }: { data: { at: number; avg: number; max: n
           <Line type="monotone" dataKey="avg" name="Avg JPM" stroke={SERIES_2} strokeWidth={2} dot={{ r: 4, strokeWidth: 2, fill: '#121214' }} activeDot={{ r: 5 }} />
         </LineChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+type Day = { start: number; jumps: number; workouts: number; activeMs: number }
+const WEEKDAYS = ['Mon', '', 'Wed', '', 'Fri', '', 'Sun']
+
+/**
+ * Calendar heatmap: one column per week (Mon at top), intensity = active jumping time that day.
+ * Each day is a button: tap/focus shows its numbers below, so colour is never the only carrier.
+ * `days` must start on a Monday (jumpBuckets from startOfWeek).
+ */
+export function ActivityHeatmap({ days }: { days: Day[] }) {
+  const [picked, setPicked] = useState<Day | null>(null)
+  const max = Math.max(0, ...days.map((d) => d.activeMs))
+  const level = (ms: number) => (ms <= 0 || !max ? 0 : Math.ceil((ms / max) * 4)) // 0..4
+  const shade = (l: number) => (l ? `rgb(139 92 246 / ${0.25 * l})` : undefined)
+  const weeks = Math.ceil(days.length / 7)
+  const show = picked ?? days.at(-1)
+  const describe = (d: Day) =>
+    `${dayFmt(d.start)}: ${d.workouts ? `${d.workouts} workout${d.workouts > 1 ? 's' : ''}, ${d.jumps} jumps, ${Math.round(d.activeMs / 60_000)} min active` : 'no workouts'}`
+  return (
+    <div>
+      <div
+        className="grid grid-flow-col grid-rows-7 gap-1"
+        style={{ gridTemplateColumns: `auto repeat(${weeks}, minmax(0, 1fr))` }}
+        role="group"
+        aria-label="Daily activity, last 12 weeks"
+      >
+        {WEEKDAYS.map((w, i) => (
+          <span key={i} className="pr-1 text-[10px] leading-none text-muted self-center" aria-hidden>
+            {w}
+          </span>
+        ))}
+        {days.map((d) => (
+          <button
+            key={d.start}
+            type="button"
+            onClick={() => setPicked(d)}
+            onFocus={() => setPicked(d)}
+            aria-label={describe(d)}
+            title={describe(d)}
+            className={`aspect-square w-full rounded-[3px] ${level(d.activeMs) ? '' : 'bg-surface-2'} ${show?.start === d.start ? 'ring-1 ring-fg' : ''}`}
+            style={{ background: shade(level(d.activeMs)) }}
+          />
+        ))}
+      </div>
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-xs text-muted">
+        <span className="tabular" aria-live="polite">{show ? describe(show) : ''}</span>
+        <span className="flex shrink-0 items-center gap-1" aria-hidden>
+          Less
+          {[0, 1, 2, 3, 4].map((l) => (
+            <span key={l} className={`size-2.5 rounded-[2px] ${l ? '' : 'bg-surface-2'}`} style={{ background: shade(l) }} />
+          ))}
+          More
+        </span>
+      </div>
     </div>
   )
 }

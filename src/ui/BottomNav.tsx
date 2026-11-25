@@ -1,5 +1,6 @@
 import { BarChart3, Home, Sparkles, Trophy, User } from 'lucide-react'
 import { NavLink, Outlet } from 'react-router'
+import { Logo } from './Logo'
 
 const tabs = [
   { to: '/', label: 'Home', icon: Home },
@@ -18,8 +19,11 @@ export function TabLayout() {
       </div>
       <nav
         aria-label="Main"
-        className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/90 pb-safe backdrop-blur md:inset-y-0 md:right-auto md:w-56 md:border-r md:border-t-0 md:pb-0 md:pt-6"
+        className="fixed inset-x-0 bottom-0 z-10 border-t border-line bg-bg/90 pb-safe backdrop-blur md:inset-y-0 md:right-auto md:w-56 md:border-r md:border-t-0 md:bg-bg md:pb-0 md:pt-6 md:backdrop-blur-none"
       >
+        <div className="hidden px-6 pb-6 md:block">
+          <Logo />
+        </div>
         <ul className="mx-auto grid max-w-md grid-cols-5 md:max-w-none md:grid-cols-1 md:gap-1 md:px-3">
           {tabs.map(({ to, label, icon: Icon }) => (
             <li key={to}>

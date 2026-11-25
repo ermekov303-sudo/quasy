@@ -75,7 +75,7 @@ export function TrickScreen() {
   const cat = CATEGORY_META[trick.category]
 
   return (
-    <Page withNav key={trick.id}>
+    <Page withNav narrow key={trick.id}>
       <ScreenHeader title={trick.name} backTo={`/tricks/c/${trick.category}`} />
       <TutorialVideo trick={trick} />
 
@@ -104,7 +104,7 @@ export function TrickScreen() {
           <Button full className="mt-4" disabled={status === 'mastered'} onClick={() => setStatus(trick.id, 'mastered')}>
             {status === 'mastered' ? <><Check size={18} aria-hidden /> Mastered</> : 'Mark as Mastered'}
           </Button>
-          <p className="mt-3 text-xs text-muted">Status is set by you. Quasy doesn't recognise tricks from the camera yet.</p>
+          <p className="mt-3 text-xs text-muted">Status is set by you. Camera trick detection (beta) never changes it.</p>
         </Card>
       </section>
 
