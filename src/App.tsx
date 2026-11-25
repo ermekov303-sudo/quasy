@@ -6,6 +6,9 @@ import { ProgressScreen } from './screens/ProgressScreen'
 import { RecordsScreen } from './screens/RecordsScreen'
 import { SummaryScreen } from './screens/SummaryScreen'
 import { WorkoutScreen } from './screens/workout/WorkoutScreen'
+import { CategoryScreen } from './screens/tricks/CategoryScreen'
+import { TrickLibraryScreen } from './screens/tricks/TrickLibraryScreen'
+import { TrickScreen } from './screens/tricks/TrickScreen'
 import { TabLayout } from './ui/BottomNav'
 
 export default function App() {
@@ -16,6 +19,9 @@ export default function App() {
           <Route element={<TabLayout />}>
             <Route index element={<HomeScreen />} />
             <Route path="progress" element={<ProgressScreen />} />
+            <Route path="tricks" element={<TrickLibraryScreen />} />
+            <Route path="tricks/c/:id" element={<CategoryScreen />} />
+            <Route path="tricks/t/:id" element={<TrickScreen />} />
             <Route path="records" element={<RecordsScreen />} />
             <Route path="profile" element={<ProfileScreen />} />
           </Route>
