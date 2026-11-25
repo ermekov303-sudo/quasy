@@ -31,3 +31,10 @@ export function levelCounts(tricks: TrickRecord[]): Record<Level, number> {
   }
   return out
 }
+
+/** Most performed tricks by number of runs (ties: higher best score first). */
+export function mostPerformed(tricks: TrickRecord[], n = 5): TrickSummaryRow[] {
+  return summarizeTricks(tricks, [])
+    .sort((a, b) => b.runs - a.runs || b.bestScore - a.bestScore)
+    .slice(0, n)
+}

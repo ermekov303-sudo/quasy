@@ -4,7 +4,7 @@ import { classify, dtw, type Decision } from './classifier'
 import { TrickEventTracker } from './events'
 import { frameFeatures, MotionBuffer } from './features'
 import { TrickRecognizer } from './recognizer'
-import { levelCounts, summarizeTricks } from './summary'
+import { levelCounts, mostPerformed, summarizeTricks } from './summary'
 
 const S = 0.2 // torso length in image units
 
@@ -206,4 +206,10 @@ describe('workout trick summary', () => {
 test('levelCounts groups trick runs by library level, zeros kept, unknown ids skipped', () => {
   const r = (trickId: string) => ({ trickId, startMs: 0, endMs: 1, score: 1 })
   expect(levelCounts([r('skier'), r('skier'), r('side-straddle'), r('nope')])).toEqual({ easy: 0, medium: 1, rare: 2, hard: 0, epic: 0 })
+})
+
+test('mostPerformed ranks by runs, then best score, and caps the list', () => {
+  const r = (trickId: string, score: number) => ({ trickId, startMs: 0, endMs: 1, score })
+  const rows = mostPerformed([r('skier', 0.7), r('skier', 0.6), r('can-can', 0.9), r('side-swing', 0.8), r('jogging-step', 0.5)], 3)
+  expect(rows.map((x) => [x.trickId, x.runs])).toEqual([['skier', 2], ['can-can', 1], ['side-swing', 1]])
 })

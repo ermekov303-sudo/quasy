@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { LEVEL_META, LEVELS, type Level } from '../tricks/tricks'
 
 // Validated on the dark surface (dataviz validator): series-1 purple, series-2 teal. Hex here: SVG attrs need literals.
 export const SERIES_1 = '#8b5cf6'
@@ -143,6 +144,42 @@ export function ActivityHeatmap({ days }: { days: Day[] }) {
           ))}
           More
         </span>
+      </div>
+    </div>
+  )
+}
+
+/** Donut of detected trick runs per level (level colours from the library); total in the centre. Empty levels are left out. */
+export function TrickLevelDonut({ counts, unique }: { counts: Record<Level, number>; unique: number }) {
+  const data = LEVELS.filter((l) => counts[l] > 0).map((l) => ({ level: l, name: LEVEL_META[l].label, value: counts[l] }))
+  const total = data.reduce((s, d) => s + d.value, 0)
+  const summary = data.map((d) => `${d.name} ${d.value}`).join(', ')
+  return (
+    <div className="relative mx-auto aspect-square w-40" role="img" aria-label={`${total} detected tricks by level: ${summary}`}>
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie data={data} dataKey="value" nameKey="name" innerRadius="66%" outerRadius="100%" paddingAngle={data.length > 1 ? 2 : 0} stroke="none" startAngle={90} endAngle={-270}>
+            {data.map((d) => (
+              <Cell key={d.level} fill={LEVEL_META[d.level].color} />
+            ))}
+          </Pie>
+          <Tooltip
+            content={({ active, payload }) =>
+              active && payload?.length ? (
+                <div className="rounded-xl border border-line bg-surface-2 px-3 py-2 text-xs text-muted shadow-lg">
+                  {payload[0].name}: <span className="tabular font-semibold text-fg">{payload[0].value}</span> (
+                  {Math.round((Number(payload[0].value) / total) * 100)}%)
+                </div>
+              ) : null
+            }
+          />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="pointer-events-none absolute inset-0 grid place-items-center text-center">
+        <div>
+          <div className="tabular text-2xl font-bold">{total}</div>
+          <div className="text-[11px] text-muted">{unique} unique</div>
+        </div>
       </div>
     </div>
   )

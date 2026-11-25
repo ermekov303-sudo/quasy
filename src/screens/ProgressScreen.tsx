@@ -4,16 +4,17 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import { formatDuration } from '../lib/format'
 import { computeMetrics } from '../metrics/workoutMetrics'
-import { levelCounts } from '../recognition/summary'
+import { levelCounts, mostPerformed, trickName } from '../recognition/summary'
 import { db, type WorkoutRecord } from '../storage/db'
 import { jumpBuckets, periodSummary, rangeStart, startOfMonth, startOfWeek, totals, trainingStreaks, type Range } from '../storage/queries'
 import { buttonClass } from '../ui/Button'
 import { Card, SectionTitle, StatCard } from '../ui/Card'
-import { ActivityHeatmap, JpmLineChart, JumpsBarChart } from '../ui/charts'
+import { ActivityHeatmap, JpmLineChart, JumpsBarChart, TrickLevelDonut } from '../ui/charts'
 import { Choice } from '../ui/Choice'
 import { EmptyState } from '../ui/EmptyState'
 import { Page } from '../ui/Page'
-import { LevelDistribution, LevelMastery } from './tricks/parts'
+import { TRICKS } from '../tricks/tricks'
+import { DifficultyBadge, LevelDistribution, LevelMastery } from './tricks/parts'
 
 const RANGES: { id: Range; label: string }[] = [
   { id: '7d', label: '7 days' },
@@ -167,34 +168,7 @@ export function ProgressScreen() {
             </div>
           </section>
 
-          <div className="mt-8 grid gap-8 lg:grid-cols-2 lg:gap-6">
-            <section>
-              <SectionTitle>Detected tricks · beta</SectionTitle>
-              <Card className="p-4">
-                {events.length ? (
-                  <>
-                    <div className="mb-4 text-sm text-muted">
-                      <span className="tabular text-xl font-bold text-fg">{events.length}</span> tricks ·{' '}
-                      <span className="tabular font-semibold text-fg">{new Set(events.map((e) => e.trickId)).size}</span> unique
-                    </div>
-                    <LevelDistribution counts={levelCounts(events)} />
-                  </>
-                ) : (
-                  <p className="text-sm text-muted">
-                    {detected.length ? 'No tricks recognized in this period.' : 'No trick data in this period. Tricks are detected (beta) during new workouts.'}
-                  </p>
-                )}
-                <p className="mt-4 text-xs text-muted">From body movement only; 8 of the 25 tricks can be detected.</p>
-              </Card>
-            </section>
-
-            <section>
-              <SectionTitle>Mastery · set by you</SectionTitle>
-              <Card className="p-4">
-                <LevelMastery />
-              </Card>
-            </section>
-          </div>
+          <TrickSection detected={detected.length} events={events} />
 
           <ActivitySection all={all} heatDays={heatDays} />
 
@@ -261,6 +235,75 @@ export function ProgressScreen() {
         </>
       )}
     </Page>
+  )
+}
+
+/**
+ * Trick analytics for the selected range: detected runs by level (donut + counts), most performed,
+ * and the manually set mastery, which detection never changes. Real recognition data only.
+ */
+function TrickSection({ detected, events }: { detected: number; events: NonNullable<WorkoutRecord['tricks']> }) {
+  const counts = levelCounts(events)
+  const top = mostPerformed(events)
+  const unique = new Set(events.map((e) => e.trickId)).size
+  return (
+    <section className="mt-8">
+      <SectionTitle>Tricks · beta</SectionTitle>
+      <div className="grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+        {events.length ? (
+          <>
+            <Card className="p-4">
+              <h3 className="text-sm font-semibold">Detected by level</h3>
+              <div className="mt-3 grid items-center gap-4 sm:grid-cols-[10rem_1fr] lg:grid-cols-1 2xl:grid-cols-[10rem_1fr]">
+                <TrickLevelDonut counts={counts} unique={unique} />
+                <LevelDistribution counts={counts} />
+              </div>
+            </Card>
+            <Card className="p-4">
+              <h3 className="text-sm font-semibold">Most performed</h3>
+              <ol className="mt-3 flex flex-col gap-3" aria-label="Most performed tricks">
+                {top.map((r, i) => {
+                  const level = TRICKS.find((t) => t.id === r.trickId)?.level
+                  return (
+                    <li key={r.trickId} className="text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="flex min-w-0 items-center gap-2">
+                          <span className="tabular w-4 text-muted">{i + 1}</span>
+                          <span className="truncate font-semibold">{trickName(r.trickId)}</span>
+                          {level && <DifficultyBadge level={level} />}
+                        </span>
+                        <span className="tabular shrink-0">
+                          <span className="font-semibold">×{r.runs}</span>
+                          <span className="text-muted"> · best {Math.round(r.bestScore * 100)}%</span>
+                        </span>
+                      </div>
+                      <div className="ml-6 mt-1.5 h-1.5 overflow-hidden rounded-full bg-surface-2">
+                        <div className="h-full rounded-full bg-accent" style={{ width: `${(r.runs / top[0].runs) * 100}%` }} />
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+              <p className="mt-4 text-xs text-muted">One continuous run counts once. Best = highest recognition confidence.</p>
+            </Card>
+          </>
+        ) : (
+          <Card className="p-4 lg:col-span-1 xl:col-span-2">
+            <h3 className="text-sm font-semibold">Detected tricks</h3>
+            <p className="mt-2 text-sm text-muted">
+              {detected ? 'No tricks recognized in this period.' : 'No trick data in this period. Tricks are detected (beta) during workouts saved from now on.'}
+            </p>
+          </Card>
+        )}
+        <Card className="p-4">
+          <h3 className="text-sm font-semibold">Mastery · set by you</h3>
+          <div className="mt-3">
+            <LevelMastery />
+          </div>
+        </Card>
+      </div>
+      <p className="mt-2 text-xs text-muted">Detection uses body movement only and covers 8 of the 25 tricks. Mastery is what you mark in the Trick Library.</p>
+    </section>
   )
 }
 
